@@ -1,6 +1,7 @@
 #include "pkt.h"
 #include <string.h>
 #include <unistd.h>
+#include <mutex>
 
 const char *empty = "00:00:00:00:00:00​";
 const char *broadcast = "ff:ff:ff:ff:ff:ff";
@@ -15,6 +16,7 @@ int main(int argc, char* argv[]) {
         usage();
         return -1;
     }
+    std::mutex mutex;
 
     cout << "bob-0x10 attendance-signal-generator program start" << endl;
     cout << "==================================================\n" << endl;
@@ -40,11 +42,13 @@ int main(int argc, char* argv[]) {
         packet_setting(request_packet, Mac(broadcast), ArpHdr::Request, gateway_ip, Mac(empty), gateway_ip);
         while(true){
             sleep(1);
+            mutex.lock();
             for(int i=2; i<255; i++){
                 sprintf(gateway_ip+len,"%d",i);
                 request_packet.arp_.tip_ = htonl(Ip(gateway_ip));
                 send_packet(request_packet, handle);
             }
+            mutex.unlock();
             printf("Signal generation success !!\n");
         }
     }
@@ -54,8 +58,10 @@ int main(int argc, char* argv[]) {
         packet_setting(request_packet, Mac(broadcast), ArpHdr::Request, gateway_ip, Mac(empty), target_ip);
         while(true) {
             sleep(1);
+            mutex.lock();
             send_packet(request_packet, handle);
             printf("Signal generation success !!\n");
+            mutex.unlock();
         }
     }
 
