@@ -28,6 +28,7 @@ void GetLocalAddr(char *dev, const char *hw){
 }
 */
 
+// 전송할 패킷 데이터 세팅하는 함수
 void packet_setting(EthArpPacket &packet, uint8_t *dmac, uint16_t op, char *sip, uint8_t *tmac, char *tip){
     packet.eth_.dmac_ = Mac(dmac);
     //packet.eth_.smac_ = Mac(local_mac);
@@ -46,6 +47,7 @@ void packet_setting(EthArpPacket &packet, uint8_t *dmac, uint16_t op, char *sip,
     packet.arp_.tip_ = htonl(Ip(tip));
 }
 
+// 세팅된 패킷을 전송하는 함수
 void send_packet(EthArpPacket packet, pcap_t* handle){
     int res = pcap_sendpacket(handle, reinterpret_cast<const u_char*>(&packet), sizeof(EthArpPacket));
     if (res != 0) {
@@ -54,6 +56,7 @@ void send_packet(EthArpPacket packet, pcap_t* handle){
     //printf("send packet success !!\n");
 }
 
+// reply 패킷인지 확인하는 함수
 int check_reply_packet(EthArpPacket attack_packet , EthArpPacket request_packet){
     return attack_packet.eth_.type_ == htons(EthHdr::Arp) &&
            attack_packet.arp_.op_ == htons(ArpHdr::Reply) &&
