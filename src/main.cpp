@@ -25,6 +25,7 @@ int main(int argc, char* argv[]) {
     char* gateway_ip = argv[2];
     gateway_mac = Mac(argv[3]);
 
+    // pcap open
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_t* handle = pcap_open_live(dev, BUFSIZ, 1, 1000, errbuf);
     if (handle == nullptr) {
@@ -32,17 +33,26 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
+    // 192.168.0.10 에서 세번째 '.'을 찾는 코드, 192.168.0.1 ~ 192.168.0.255 까지 보낼 준비
     char* ret;
     int len = 0;
     while( (ret = strchr(gateway_ip + len,'.')) != NULL ) len = ret-gateway_ip+1;
 
     EthArpPacket request_packet;                                //for get sender's mac address
 
+    // target ip가 따로 없이 broadcast로 패킷을 보낼 때
     if (argc == 4){
+
+        //아래와 같이 패킷 세팅
         packet_setting(request_packet, Mac(broadcast), ArpHdr::Request, gateway_ip, Mac(empty), gateway_ip);
+        
         while(true){
+            
+            // 1초에 한번씩 패킷 발생을 유도
             sleep(1);
             mutex.lock();
+
+            // 192.168.0.2 ~ 192.168.0.254에 패킷 전송하여 패킷 발생 유도
             for(int i=2; i<255; i++){
                 sprintf(gateway_ip+len,"%d",i);
                 request_packet.arp_.tip_ = htonl(Ip(gateway_ip));
@@ -53,14 +63,23 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    //target ip에게만 패킷을 보낼 때, 단일타겟
     else if (argc == 5){
         char* target_ip = argv[4];
+
+        //아래와 같이 패킷 세팅
         packet_setting(request_packet, Mac(broadcast), ArpHdr::Request, gateway_ip, Mac(empty), target_ip);
+        
         while(true) {
+        
+            // 1초에 한번씩 패킷 발생을 유도
             sleep(1);
             mutex.lock();
+        
+            // 패킷 전송하여 패킷 발생 유도
             send_packet(request_packet, handle);
             printf("Signal generation success !!\n");
+        
             mutex.unlock();
         }
     }
